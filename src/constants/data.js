@@ -16,7 +16,7 @@ export const orbPositions = [
   { left: "33%", top: "80%" },
 ];
 
-export const orbDurations = [8, 9.5, 7.2, 10, 6.8, 8.5, 9, 7.8];
+export const orbDurations = [4, 5, 3, 5, 3, 4, 4, 3.5];
 
 export const articles = [
   {

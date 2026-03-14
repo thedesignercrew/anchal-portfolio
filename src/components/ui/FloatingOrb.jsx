@@ -2,7 +2,7 @@ import { orbPositions, orbDurations } from "../../constants/data";
 
 const FloatingOrb = ({ delay = 0, size = 6, color = "#C8AA78", index = 0 }) => {
   const pos = orbPositions[index % orbPositions.length];
-  const dur = orbDurations[index % orbDurations.length];
+  const dur = orbDurations[index % orbDurations.length]/2;
   const style = {
     position: "absolute",
     width: size,
