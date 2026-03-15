@@ -94,6 +94,39 @@ a {
   75% { transform: rotate(-1deg); }
 }
 
+@keyframes pillReveal {
+  from { opacity: 0; transform: translateY(40px) scale(0.96); filter: blur(6px); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    filter: blur(0px); }
+}
+
+@keyframes iconGlow {
+  0%, 100% { box-shadow: 0 0 0px rgba(200,170,120,0); }
+  50%       { box-shadow: 0 0 20px rgba(200,170,120,0.45), 0 0 40px rgba(200,170,120,0.15); }
+}
+
+@keyframes shimmerSweep {
+  0%   { transform: translateX(-100%) skewX(-12deg); }
+  100% { transform: translateX(250%)  skewX(-12deg); }
+}
+
+/* Per-card float animations — different distances and rhythms */
+@keyframes float0 {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-7px); }
+}
+@keyframes float1 {
+  0%, 100% { transform: translateY(0px); }
+  45%       { transform: translateY(-5px); }
+}
+@keyframes float2 {
+  0%, 100% { transform: translateY(0px); }
+  55%       { transform: translateY(-9px); }
+}
+@keyframes float3 {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-6px); }
+}
+
 /* --- Utility Classes --- */
 
 .nav-link {
@@ -146,4 +179,9 @@ a {
   .work-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Hide scrollbar on philosophy pill track */
+.philosophy-track::-webkit-scrollbar {
+  display: none;
 }
