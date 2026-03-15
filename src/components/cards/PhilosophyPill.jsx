@@ -1,7 +1,12 @@
 import { useState, useRef } from "react";
 
-// Deliberate vertical offsets — breaks the grid's symmetry
-const STAGGER_OFFSETS = [0, 18, 10, 28]; // px, one per card
+// Deliberate offsets — breaks the grid's symmetry in both axes
+const STAGGER_OFFSETS = [
+  { x:  -20, y:  -20 },
+  { x:  50, y: 18 },
+  { x: -6, y: 10 },
+  { x:  25, y: 28 },
+];
 // Float: duration, delay-into-cycle (so they're out of phase)
 const FLOAT_CONFIG = [
   { duration: "5.2s", delay: "0s"    },
@@ -42,7 +47,11 @@ const PhilosophyPill = ({ icon, title, desc, delay, index = 0 }) => {
   return (
     <div
       style={{
-        marginTop: staticOffset,
+        transform: `translate(${staticOffset.x}px, ${staticOffset.y}px)`,
+      }}
+    >
+    <div
+      style={{
         animation: hovered
           ? "none"
           : `float${index} ${floatCfg.duration} ease-in-out ${floatCfg.delay} infinite`,
@@ -176,6 +185,7 @@ const PhilosophyPill = ({ icon, title, desc, delay, index = 0 }) => {
           pointerEvents: "none",
         }}
       />
+    </div>
     </div>
     </div>
   );

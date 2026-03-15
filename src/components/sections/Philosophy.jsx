@@ -157,8 +157,8 @@ const Philosophy = () => {
           style={{
             flex: 1,
             display: "grid",
-            gridTemplateColumns: "repeat(2, 1fr)",
-            gap: 16,
+            gridTemplateColumns: "repeat(2, 2)",
+            gap: 24,
           }}
         >
           {philosophies.map((item, i) => (
