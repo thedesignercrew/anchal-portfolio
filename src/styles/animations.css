@@ -127,6 +127,11 @@ a {
   50%       { transform: translateY(-6px); }
 }
 
+@keyframes chevronBob {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(3px); }
+}
+
 /* --- Utility Classes --- */
 
 .nav-link {
