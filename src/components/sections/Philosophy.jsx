@@ -1,3 +1,4 @@
+import { useRef, useEffect, useState } from "react";
 import PhilosophyPill from "../cards/PhilosophyPill";
 import { philosophies } from "../../constants/data";
 
@@ -80,8 +81,28 @@ const PerspectiveGrid = () => {
 };
 
 const Philosophy = () => {
+  const sectionRef = useRef(null);
+  const [isPast, setIsPast] = useState(false);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // isPast = section has left the viewport scrolling upward (below threshold)
+        setIsPast(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+      },
+      { threshold: 0 }
+    );
+
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <section
+      ref={sectionRef}
       style={{
         padding: "180px 0",
         minHeight: "100vh",
@@ -89,7 +110,6 @@ const Philosophy = () => {
         flexDirection: "column",
         justifyContent: "center",
         position: "relative",
-        overflow: "hidden",
       }}
     >
       <PerspectiveGrid />
@@ -125,14 +145,14 @@ const Philosophy = () => {
           gap: "clamp(40px, 5vw, 80px)",
         }}
       >
-        {/* Left: large heading */}
+        {/* Left: large heading — sticky until section is scrolled past */}
         <div
           style={{
             flexShrink: 0,
             width: "clamp(200px, 22vw, 320px)",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
+            position: isPast ? "relative" : "sticky",
+            top: isPast ? "auto" : "120px",
+            alignSelf: "flex-start",
             paddingTop: 8,
           }}
         >

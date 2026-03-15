@@ -26,7 +26,6 @@ export default function Portfolio() {
         color: "#F5F0E8",
         minHeight: "100vh",
         fontFamily: "'DM Sans', sans-serif",
-        overflowX: "hidden",
         position: "relative",
       }}
     >
