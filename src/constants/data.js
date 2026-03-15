@@ -69,21 +69,25 @@ export const philosophies = [
     icon: "◇",
     title: "Simplicity in Complexity",
     desc: "I break down intricate workflows into clear, actionable experiences.",
+    detail: "Whether it's a 12-step onboarding or an enterprise dashboard, I start by mapping every edge case — then systematically remove everything that doesn't earn its place. The result feels obvious in hindsight, which is exactly the goal.",
   },
   {
     icon: "◎",
     title: "Design with Purpose",
     desc: "Every pixel and decision should solve a problem, without ambiguity.",
+    detail: "I push back on decoration that doesn't carry meaning. Before any visual decision, I ask what job it does. That constraint forces honesty — and it's why my work tends to age well even as trends shift.",
   },
   {
     icon: "◈",
     title: "Global Thinking",
     desc: "Crafting scalable solutions that work across industries and borders.",
+    detail: "Having worked across fintech, healthcare, and mobility, I've learned that the deepest design problems are universal — trust, clarity, speed. I borrow patterns across domains and stress-test assumptions against users who aren't like me.",
   },
   {
     icon: "◉",
     title: "Collaboration First",
     desc: "Great products happen when designers, engineers, and PMs work as one.",
+    detail: "I embed in cross-functional teams early and stay late. I speak in constraints engineers respect and outcomes PMs can defend. The best feedback I've ever gotten came from a developer who finally felt heard.",
   },
 ];
 

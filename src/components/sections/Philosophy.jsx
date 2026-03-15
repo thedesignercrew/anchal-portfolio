@@ -168,6 +168,7 @@ const Philosophy = () => {
               icon={item.icon}
               title={item.title}
               desc={item.desc}
+              detail={item.detail}
               delay={0.1 + i * 0.1}
             />
           ))}

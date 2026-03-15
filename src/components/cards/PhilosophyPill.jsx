@@ -188,7 +188,7 @@ const FLOAT_CONFIG = [
   { duration: "5.6s", delay: "2.1s"  },
 ];
 
-const PhilosophyPill = ({ icon, title, desc, delay, index = 0 }) => {
+const PhilosophyPill = ({ icon, title, desc, detail, delay, index = 0 }) => {
   const [hovered, setHovered] = useState(false);
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [shimmer, setShimmer] = useState(false);
@@ -344,6 +344,42 @@ const PhilosophyPill = ({ icon, title, desc, delay, index = 0 }) => {
           >
             {desc}
           </div>
+
+          {/* Ruled reveal */}
+          {detail && (
+            <div
+              style={{
+                overflow: "hidden",
+                maxHeight: hovered ? "120px" : "0px",
+                transition: "max-height 0.45s cubic-bezier(0.23,1,0.32,1)",
+              }}
+            >
+              {/* Hairline rule that draws in */}
+              <div
+                style={{
+                  height: 1,
+                  marginTop: 16,
+                  marginBottom: 14,
+                  background: "rgba(200,170,120,0.3)",
+                  transformOrigin: "left center",
+                  transform: hovered ? "scaleX(1)" : "scaleX(0)",
+                  transition: "transform 0.4s cubic-bezier(0.23,1,0.32,1) 0.05s",
+                }}
+              />
+              <div
+                style={{
+                  fontSize: "0.875rem",
+                  color: "rgba(245,240,232,0.45)",
+                  lineHeight: 1.75,
+                  opacity: hovered ? 1 : 0,
+                  transform: hovered ? "translateY(0)" : "translateY(6px)",
+                  transition: "opacity 0.35s ease 0.15s, transform 0.4s cubic-bezier(0.23,1,0.32,1) 0.15s",
+                }}
+              >
+                {detail}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
