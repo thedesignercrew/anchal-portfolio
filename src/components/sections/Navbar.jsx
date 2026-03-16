@@ -5,7 +5,7 @@ const navItems = ["Work", "Writing", "About"];
 
 const Navbar = () => {
   const [visible, setVisible] = useState(true);
-  const lastScrollY = useRef(0);
+  const lastScrollY = useRef(typeof window !== "undefined" ? window.scrollY : 0);
   const ticking = useRef(false);
 
   useEffect(() => {
@@ -48,8 +48,7 @@ const Navbar = () => {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
-        background: "rgba(10,10,10,0.8)",
-        backdropFilter: "blur(20px)",
+        background: "none",
         borderBottom: "1px solid rgba(255,255,255,0.04)",
         // Slide up + fade out on hide, slide down + fade in on reveal
         transform: visible ? "translateY(0)" : "translateY(-110%)",
