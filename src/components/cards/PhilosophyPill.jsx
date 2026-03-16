@@ -89,7 +89,7 @@ const PhilosophyPill = ({ icon, title, desc, detail, delay, index = 0 }) => {
               ? "transform 0.12s ease, box-shadow 0.4s ease, background 0.4s ease"
               : "transform 0.55s cubic-bezier(0.23,1,0.32,1), box-shadow 0.55s ease, background 0.4s ease",
             background: expanded
-              ? "rgba(255,255,255,0.045)"
+              ? "rgba(0, 0, 0, 0.4)"
               : "rgba(255,255,255,0.015)",
             boxShadow: expanded
               ? "0 8px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07)"

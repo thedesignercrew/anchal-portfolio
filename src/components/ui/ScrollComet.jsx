@@ -199,7 +199,7 @@ const ScrollComet = () => {
     if (!comet || !bloom) return;
 
     const convX = () => window.innerWidth / 2;
-    const convY = () => window.innerHeight * 0.8;
+    const convY = () => window.innerHeight * 0.4;
 
     // Init
     const floatAnims = setupOrbFloats(orbRefs.current);
