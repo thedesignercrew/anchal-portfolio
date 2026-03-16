@@ -1,4 +1,3 @@
-import FloatingOrb from "../ui/FloatingOrb";
 import RingSpinner from "../ui/RingSpinner";
 
 const Hero = () => (
@@ -26,15 +25,6 @@ const Hero = () => (
       <RingSpinner size={180} speed={25} />
       <RingSpinner size={120} speed={18} color="rgba(138,172,184,0.12)" />
     </div>
-
-    {[...Array(8)].map((_, i) => (
-      <FloatingOrb
-        key={i}
-        delay={i * 0.5}
-        size={4 + (i % 3) * 2}
-        index={i}
-      />
-    ))}
 
     <div style={{ position: "relative", zIndex: 2 }}>
       <div

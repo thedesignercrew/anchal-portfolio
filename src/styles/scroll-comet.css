@@ -1,0 +1,42 @@
+/* ─── ScrollComet ─────────────────────────────────────────────────── */
+
+.scroll-comet-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 10;
+  overflow: visible;
+}
+
+.scroll-comet-orb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 50%;
+  background: #C8AA78;
+  will-change: transform;
+}
+
+.scroll-comet-bloom {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #C8AA78 0%, transparent 70%);
+  opacity: 0;
+  filter: blur(8px);
+}
+
+.scroll-comet-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 10;
+  overflow: visible;
+}

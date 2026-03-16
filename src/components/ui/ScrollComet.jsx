@@ -2,16 +2,178 @@ import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { MotionPathPlugin } from "gsap/MotionPathPlugin";
+import { orbPositions, orbDurations } from "../../constants/data";
+import "../../styles/scroll-comet.css";
 
 gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
 
-// ─── ScrollComet ─────────────────────────────────────────────────────────────
-// A glowing comet that follows a curvy SVG path down the full page length,
-// scrubbed to scroll progress. Leaves a fading tail of ghost circles behind it.
-// At the Philosophy section it auto-expands each pill card sequentially.
-
 const TAIL_COUNT = 18;
 const GOLD = "#C8AA78";
+const ORB_COUNT = 8;
+const orbSizes = Array.from({ length: ORB_COUNT }, (_, i) => 4 + (i % 3) * 2);
+
+// ─── Helpers ────────────────────────────────────────────────────────
+
+function buildPath(w, h, startX, startY) {
+  const segments = 14;
+  const segH = (h - startY) / segments;
+  const margin = w * 0.12;
+  const center = w / 2;
+  let d = `M ${startX} ${startY}`;
+
+  for (let i = 0; i < segments; i++) {
+    const y0 = startY + i * segH;
+    const y1 = startY + (i + 1) * segH;
+    const yMid = (y0 + y1) / 2;
+    const goRight = i % 2 === 0;
+    const tx = goRight ? w - margin : margin;
+    const sign = goRight ? 1 : -1;
+
+    d += ` C ${center + sign * w * 0.25} ${y0 + segH * 0.3}, ${tx} ${yMid - segH * 0.1}, ${tx} ${yMid}`;
+    d += ` C ${tx} ${yMid + segH * 0.1}, ${center + sign * w * 0.15} ${y1 - segH * 0.3}, ${center} ${y1}`;
+  }
+  return d;
+}
+
+function cometHighlight(card, entering) {
+  card.dispatchEvent(new CustomEvent(entering ? "comet-enter" : "comet-leave"));
+}
+
+// ─── Animation setup ────────────────────────────────────────────────
+
+function setupOrbFloats(orbEls) {
+  const anims = [];
+  orbEls.forEach((orb, i) => {
+    if (!orb) return;
+    const pos = orbPositions[i % orbPositions.length];
+    gsap.set(orb, {
+      x: window.innerWidth * (parseFloat(pos.left) / 100),
+      y: window.innerHeight * (parseFloat(pos.top) / 100),
+      xPercent: -50,
+      yPercent: -50,
+      opacity: 0.4,
+      scale: 1,
+    });
+    anims.push(
+      gsap.to(orb, {
+        y: `+=${-15 - i * 3}`,
+        x: `+=${(i % 2 === 0 ? 1 : -1) * 10}`,
+        duration: orbDurations[i % orbDurations.length] / 2,
+        ease: "sine.inOut",
+        repeat: -1,
+        yoyo: true,
+        delay: i * 0.5,
+      })
+    );
+  });
+  return anims;
+}
+
+function setupConvergence(orbEls, bloomEl, cometEl, glowEl, tailEls, floatAnims, convX, convY) {
+  const tl = gsap.timeline({
+    scrollTrigger: {
+      trigger: document.documentElement,
+      start: "top top",
+      end: "15% top",
+      scrub: 1.2,
+      onEnter: () => floatAnims.forEach((a) => a.pause()),
+      onLeaveBack: () => floatAnims.forEach((a) => a.resume()),
+      onUpdate: (self) => {
+        if (self.progress < 1) {
+          const docY = window.scrollY + convY();
+          const docX = convX();
+          gsap.set([cometEl, glowEl], { x: docX, y: docY });
+          tailEls.forEach((d) => d && gsap.set(d, { x: docX, y: docY }));
+        }
+      },
+    },
+  });
+
+  // Orbs fly to center
+  orbEls.forEach((orb, i) => {
+    if (!orb) return;
+    tl.to(orb, { x: convX(), y: convY(), opacity: 1, scale: 1.4, ease: "power2.inOut", duration: 0.6 }, i * 0.04);
+  });
+
+  // Bloom pulse
+  tl.to(bloomEl, { scale: 1, opacity: 1, ease: "power2.out", duration: 0.1 }, 0.82);
+  tl.to(bloomEl, { scale: 2.5, opacity: 0, ease: "power2.in", duration: 0.18 }, 0.92);
+
+  // Fade out orbs, fade in comet
+  tl.to(orbEls.filter(Boolean), { opacity: 0, scale: 0, ease: "power1.in", duration: 0.12 }, 0.88);
+  tl.to([cometEl, glowEl], { opacity: 1, ease: "power2.out", duration: 0.12 }, 0.9);
+
+  return tl;
+}
+
+function setupCometTravel(cometEl, glowEl, tailEls, pathEl) {
+  const motionOpts = (extra = {}) => ({
+    motionPath: { path: pathEl, align: pathEl, alignOrigin: [0.5, 0.5], ...extra },
+    ease: "none",
+    duration: 1,
+  });
+
+  const tl = gsap.timeline({
+    scrollTrigger: { trigger: document.documentElement, start: "15% top", end: "bottom bottom", scrub: 1.2 },
+  });
+
+  tl.to(cometEl, motionOpts({ autoRotate: true }));
+  tl.to(glowEl, motionOpts(), 0);
+
+  // Tail ghosts
+  tailEls.forEach((dot, i) => {
+    if (!dot) return;
+    gsap.to(dot, {
+      ...motionOpts(),
+      scrollTrigger: {
+        trigger: document.documentElement,
+        start: "15% top",
+        end: "bottom bottom",
+        scrub: 1.2 + (i + 1) * 0.004 * 60,
+        onEnter: () => gsap.set(dot, { opacity: 0.45 * (1 - (i + 1) / TAIL_COUNT) }),
+        onLeaveBack: () => gsap.set(dot, { opacity: 0 }),
+      },
+    });
+  });
+}
+
+function setupPillHighlight() {
+  let activePill = null;
+
+  return requestAnimationFrame(() => {
+    const pills = document.querySelectorAll("[data-philosophy-pill]");
+    if (!pills.length) return;
+    const section = pills[0].closest("section");
+    if (!section) return;
+
+    ScrollTrigger.create({
+      trigger: section,
+      start: "top 80%",
+      end: "bottom 20%",
+      onUpdate: () => {
+        const centerY = window.innerHeight / 2;
+        let closest = null;
+        let closestDist = Infinity;
+
+        pills.forEach((card) => {
+          const dist = Math.abs(card.getBoundingClientRect().top + card.getBoundingClientRect().height / 2 - centerY);
+          if (dist < closestDist) { closestDist = dist; closest = card; }
+        });
+
+        const next = closestDist < window.innerHeight * 0.4 ? closest : null;
+        if (next !== activePill) {
+          if (activePill) cometHighlight(activePill, false);
+          if (next) cometHighlight(next, true);
+          activePill = next;
+        }
+      },
+      onLeave: () => { if (activePill) { cometHighlight(activePill, false); activePill = null; } },
+      onLeaveBack: () => { if (activePill) { cometHighlight(activePill, false); activePill = null; } },
+    });
+  });
+}
+
+// ─── Component ──────────────────────────────────────────────────────
 
 const ScrollComet = () => {
   const svgRef = useRef(null);
@@ -19,267 +181,102 @@ const ScrollComet = () => {
   const glowRef = useRef(null);
   const tailRefs = useRef([]);
   const pathRef = useRef(null);
+  const orbRefs = useRef([]);
+  const bloomRef = useRef(null);
 
   useEffect(() => {
     const svg = svgRef.current;
     const comet = cometRef.current;
     const glow = glowRef.current;
     const path = pathRef.current;
-    if (!svg || !comet || !path) return;
+    const bloom = bloomRef.current;
+    if (!svg || !comet || !path || !bloom) return;
 
-    // ── Resize SVG to match full document height ──
+    const convX = () => window.innerWidth / 2;
+    const convY = () => window.innerHeight * 0.8;
+
+    // Resize SVG to match document
     const resize = () => {
       const docH = document.documentElement.scrollHeight;
       const docW = window.innerWidth;
       svg.setAttribute("viewBox", `0 0 ${docW} ${docH}`);
       svg.style.width = `${docW}px`;
       svg.style.height = `${docH}px`;
-
-      // Build a curvy S-path that weaves across the page
-      const points = buildPath(docW, docH);
-      path.setAttribute("d", points);
+      path.setAttribute("d", buildPath(docW, docH, convX(), docH * 0.15 + convY()));
     };
-
     resize();
     window.addEventListener("resize", resize);
 
-    // ── Main comet animation along the path ──
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: document.documentElement,
-        start: "top top",
-        end: "bottom bottom",
-        scrub: 1.2,
-      },
-    });
+    // Init
+    const floatAnims = setupOrbFloats(orbRefs.current);
 
-    // Animate the comet group along the motion path
-    tl.to(comet, {
-      motionPath: {
-        path: path,
-        align: path,
-        alignOrigin: [0.5, 0.5],
-        autoRotate: true,
-      },
-      ease: "none",
-      duration: 1,
-    });
+    gsap.set(bloom, { x: convX(), y: convY(), scale: 0, opacity: 0, xPercent: -50, yPercent: -50 });
+    gsap.set([comet, glow], { opacity: 0 });
+    tailRefs.current.forEach((d) => d && gsap.set(d, { opacity: 0 }));
 
-    // Animate glow in sync
-    tl.to(
-      glow,
-      {
-        motionPath: {
-          path: path,
-          align: path,
-          alignOrigin: [0.5, 0.5],
-        },
-        ease: "none",
-        duration: 1,
-      },
-      0
-    );
-
-    // ── Tail: each ghost follows the same path with increasing delay ──
-    tailRefs.current.forEach((dot, i) => {
-      if (!dot) return;
-      const offset = (i + 1) * 0.004; // stagger behind the head
-      gsap.to(dot, {
-        motionPath: {
-          path: path,
-          align: path,
-          alignOrigin: [0.5, 0.5],
-        },
-        ease: "none",
-        scrollTrigger: {
-          trigger: document.documentElement,
-          start: "top top",
-          end: "bottom bottom",
-          scrub: 1.2 + offset * 60,
-        },
-      });
-    });
-
-    // ── Philosophy pill auto-expand: one card at a time ──
-    // Defer pill setup to next frame so child components have mounted.
-    let activePill = null;
-    const pillRAF = requestAnimationFrame(() => {
-      const pillCards = document.querySelectorAll("[data-philosophy-pill]");
-      if (pillCards.length === 0) return;
-
-      const philosophySection = pillCards[0].closest("section");
-      if (!philosophySection) return;
-
-      ScrollTrigger.create({
-        trigger: philosophySection,
-        start: "top 80%",
-        end: "bottom 20%",
-        onUpdate: () => {
-          const viewCenterY = window.innerHeight / 2;
-          let closest = null;
-          let closestDist = Infinity;
-
-          pillCards.forEach((card) => {
-            const rect = card.getBoundingClientRect();
-            const cardCenterY = rect.top + rect.height / 2;
-            const dist = Math.abs(cardCenterY - viewCenterY);
-            if (dist < closestDist) {
-              closestDist = dist;
-              closest = card;
-            }
-          });
-
-          const newActive = closestDist < window.innerHeight * 0.4 ? closest : null;
-
-          if (newActive !== activePill) {
-            if (activePill) cometHighlight(activePill, false);
-            if (newActive) cometHighlight(newActive, true);
-            activePill = newActive;
-          }
-        },
-        onLeave: () => {
-          if (activePill) { cometHighlight(activePill, false); activePill = null; }
-        },
-        onLeaveBack: () => {
-          if (activePill) { cometHighlight(activePill, false); activePill = null; }
-        },
-      });
-    });
+    // Animations
+    setupConvergence(orbRefs.current, bloom, comet, glow, tailRefs.current, floatAnims, convX, convY);
+    setupCometTravel(comet, glow, tailRefs.current, path);
+    const pillRAF = setupPillHighlight();
 
     return () => {
       cancelAnimationFrame(pillRAF);
       window.removeEventListener("resize", resize);
+      floatAnims.forEach((a) => a.kill());
       ScrollTrigger.getAll().forEach((t) => t.kill());
     };
   }, []);
 
   return (
-    <svg
-      ref={svgRef}
-      style={{
-        position: "absolute",
-        top: 0,
-        left: 0,
-        pointerEvents: "none",
-        zIndex: 10,
-        overflow: "visible",
-      }}
-    >
-      <defs>
-        {/* Comet head glow filter */}
-        <filter id="comet-glow" x="-200%" y="-200%" width="500%" height="500%">
-          <feGaussianBlur stdDeviation="6" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
-        </filter>
-
-        {/* Larger ambient glow */}
-        <filter
-          id="comet-ambient"
-          x="-300%"
-          y="-300%"
-          width="700%"
-          height="700%"
-        >
-          <feGaussianBlur stdDeviation="18" />
-        </filter>
-
-        {/* Radial gradient for tail dots */}
-        <radialGradient id="tail-grad">
-          <stop offset="0%" stopColor={GOLD} stopOpacity="0.6" />
-          <stop offset="100%" stopColor={GOLD} stopOpacity="0" />
-        </radialGradient>
-      </defs>
-
-      {/* The guide path — invisible */}
-      <path
-        ref={pathRef}
-        d=""
-        fill="none"
-        stroke="none"
-      />
-
-      {/* Tail ghosts — drawn behind the head */}
-      {Array.from({ length: TAIL_COUNT }).map((_, i) => {
-        const t = (i + 1) / TAIL_COUNT;
-        const radius = 5 * (1 - t * 0.7);
-        const opacity = 0.45 * (1 - t);
-        return (
-          <circle
+    <>
+      <div className="scroll-comet-wrapper">
+        {Array.from({ length: ORB_COUNT }).map((_, i) => (
+          <div
             key={i}
-            ref={(el) => (tailRefs.current[i] = el)}
-            r={radius}
-            fill={GOLD}
-            opacity={opacity}
-            style={{ filter: `blur(${1 + t * 4}px)` }}
+            ref={(el) => (orbRefs.current[i] = el)}
+            className="scroll-comet-orb"
+            style={{ width: orbSizes[i], height: orbSizes[i] }}
           />
-        );
-      })}
+        ))}
+        <div ref={bloomRef} className="scroll-comet-bloom" />
+      </div>
 
-      {/* Ambient glow behind the comet */}
-      <circle
-        ref={glowRef}
-        r={28}
-        fill={GOLD}
-        opacity={0.08}
-        filter="url(#comet-ambient)"
-      />
+      <svg ref={svgRef} className="scroll-comet-svg">
+        <defs>
+          <filter id="comet-glow" x="-200%" y="-200%" width="500%" height="500%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+          <filter id="comet-ambient" x="-300%" y="-300%" width="700%" height="700%">
+            <feGaussianBlur stdDeviation="18" />
+          </filter>
+          <radialGradient id="tail-grad">
+            <stop offset="0%" stopColor={GOLD} stopOpacity="0.6" />
+            <stop offset="100%" stopColor={GOLD} stopOpacity="0" />
+          </radialGradient>
+        </defs>
 
-      {/* Comet head */}
-      <circle
-        ref={cometRef}
-        r={6}
-        fill={GOLD}
-        filter="url(#comet-glow)"
-        opacity={0.9}
-      />
-    </svg>
+        <path ref={pathRef} d="" fill="none" stroke="none" />
+
+        {Array.from({ length: TAIL_COUNT }).map((_, i) => {
+          const t = (i + 1) / TAIL_COUNT;
+          return (
+            <circle
+              key={i}
+              ref={(el) => (tailRefs.current[i] = el)}
+              r={5 * (1 - t * 0.7)}
+              fill={GOLD}
+              opacity={0}
+              style={{ filter: `blur(${1 + t * 4}px)` }}
+            />
+          );
+        })}
+
+        <circle ref={glowRef} r={28} fill={GOLD} opacity={0} filter="url(#comet-ambient)" />
+        <circle ref={cometRef} r={6} fill={GOLD} filter="url(#comet-glow)" opacity={0} />
+      </svg>
+    </>
   );
 };
-
-// ─── Build an S-curve path that weaves across the page ──────────────────────
-function buildPath(w, h) {
-  // The path oscillates left ↔ right with smooth cubic beziers.
-  // We divide the page into segments and alternate sides.
-  const segments = 14;
-  const segH = h / segments;
-  const margin = w * 0.12; // how close to the edge we go
-  const center = w / 2;
-
-  let d = `M ${center} 0`; // start at top center
-
-  for (let i = 0; i < segments; i++) {
-    const y0 = i * segH;
-    const y1 = (i + 1) * segH;
-    const yMid = (y0 + y1) / 2;
-
-    // Alternate between left and right side
-    const goRight = i % 2 === 0;
-    const targetX = goRight ? w - margin : margin;
-
-    // Control points create a smooth S-curve
-    const cp1x = center + (goRight ? 1 : -1) * (w * 0.25);
-    const cp1y = y0 + segH * 0.3;
-    const cp2x = targetX;
-    const cp2y = yMid - segH * 0.1;
-
-    // Curve to the side
-    d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${targetX} ${yMid}`;
-
-    // Curve back toward center for the next segment
-    const cp3x = targetX;
-    const cp3y = yMid + segH * 0.1;
-    const cp4x = center + (goRight ? 1 : -1) * (w * 0.15);
-    const cp4y = y1 - segH * 0.3;
-
-    d += ` C ${cp3x} ${cp3y}, ${cp4x} ${cp4y}, ${center} ${y1}`;
-  }
-
-  return d;
-}
-
-// ─── Dispatch custom comet events to PhilosophyPill cards ───────────────────
-function cometHighlight(card, entering) {
-  card.dispatchEvent(new CustomEvent(entering ? "comet-enter" : "comet-leave"));
-}
 
 export default ScrollComet;
