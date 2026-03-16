@@ -1,39 +1,35 @@
 import { useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { MotionPathPlugin } from "gsap/MotionPathPlugin";
 import { orbPositions, orbDurations } from "../../constants/data";
 import "../../styles/scroll-comet.css";
 
-gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
+gsap.registerPlugin(ScrollTrigger);
 
 const TAIL_COUNT = 18;
-const GOLD = "#C8AA78";
 const ORB_COUNT = 8;
 const orbSizes = Array.from({ length: ORB_COUNT }, (_, i) => 4 + (i % 3) * 2);
 
-// ─── Helpers ────────────────────────────────────────────────────────
+// ─── Parametric comet path ──────────────────────────────────────────
 
-function buildPath(w, h, startX, startY) {
-  const segments = 14;
-  const segH = (h - startY) / segments;
-  const margin = w * 0.12;
-  const center = w / 2;
-  let d = `M ${startX} ${startY}`;
+function cometPosition(t, vw, vh) {
+  const waves = 2;
+  const ampX = vw * 0.38;
+  const x = vw / 2 + ampX * Math.sin(t * waves * 2 * Math.PI);
 
-  for (let i = 0; i < segments; i++) {
-    const y0 = startY + i * segH;
-    const y1 = startY + (i + 1) * segH;
-    const yMid = (y0 + y1) / 2;
-    const goRight = i % 2 === 0;
-    const tx = goRight ? w - margin : margin;
-    const sign = goRight ? 1 : -1;
+  // Ease from convergence point (80vh) to cruise altitude (~50vh)
+  const startY = vh * 0.8;
+  const cruiseY = vh * 0.5;
+  const blend = Math.min(t * 5, 1); // transition over first 20% of travel
+  const easedBlend = 1 - Math.pow(1 - blend, 3); // easeOutCubic
+  const baseY = startY + (cruiseY - startY) * easedBlend;
+  const oscillateY = vh * 0.08 * Math.sin(t * 3 * 2 * Math.PI);
+  const y = baseY + oscillateY * blend;
 
-    d += ` C ${center + sign * w * 0.25} ${y0 + segH * 0.3}, ${tx} ${yMid - segH * 0.1}, ${tx} ${yMid}`;
-    d += ` C ${tx} ${yMid + segH * 0.1}, ${center + sign * w * 0.15} ${y1 - segH * 0.3}, ${center} ${y1}`;
-  }
-  return d;
+  return { x, y };
 }
+
+// ─── Helpers ────────────────────────────────────────────────────────
 
 function cometHighlight(card, entering) {
   card.dispatchEvent(new CustomEvent(entering ? "comet-enter" : "comet-leave"));
@@ -80,10 +76,8 @@ function setupConvergence(orbEls, bloomEl, cometEl, glowEl, tailEls, floatAnims,
       onLeaveBack: () => floatAnims.forEach((a) => a.resume()),
       onUpdate: (self) => {
         if (self.progress < 1) {
-          const docY = window.scrollY + convY();
-          const docX = convX();
-          gsap.set([cometEl, glowEl], { x: docX, y: docY });
-          tailEls.forEach((d) => d && gsap.set(d, { x: docX, y: docY }));
+          gsap.set([cometEl, glowEl], { x: convX(), y: convY(), xPercent: -50, yPercent: -50 });
+          tailEls.forEach((d) => d && gsap.set(d, { x: convX(), y: convY(), xPercent: -50, yPercent: -50 }));
         }
       },
     },
@@ -106,34 +100,50 @@ function setupConvergence(orbEls, bloomEl, cometEl, glowEl, tailEls, floatAnims,
   return tl;
 }
 
-function setupCometTravel(cometEl, glowEl, tailEls, pathEl) {
-  const motionOpts = (extra = {}) => ({
-    motionPath: { path: pathEl, align: pathEl, alignOrigin: [0.5, 0.5], ...extra },
-    ease: "none",
-    duration: 1,
-  });
+function setupCometTravel(cometEl, glowEl, tailEls) {
+  let prevT = 0;
 
-  const tl = gsap.timeline({
-    scrollTrigger: { trigger: document.documentElement, start: "15% top", end: "bottom bottom", scrub: 1.2 },
-  });
+  ScrollTrigger.create({
+    trigger: document.documentElement,
+    start: "15% top",
+    end: "bottom bottom",
+    onUpdate: (self) => {
+      const t = self.progress;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const velocity = t - prevT; // positive = scrolling down, negative = up
+      prevT = t;
 
-  tl.to(cometEl, motionOpts({ autoRotate: true }));
-  tl.to(glowEl, motionOpts(), 0);
+      const { x, y } = cometPosition(t, vw, vh);
+      gsap.set(cometEl, { x, y, xPercent: -50, yPercent: -50 });
+      gsap.set(glowEl, { x, y, xPercent: -50, yPercent: -50 });
 
-  // Tail ghosts
-  tailEls.forEach((dot, i) => {
-    if (!dot) return;
-    gsap.to(dot, {
-      ...motionOpts(),
-      scrollTrigger: {
-        trigger: document.documentElement,
-        start: "15% top",
-        end: "bottom bottom",
-        scrub: 1.2 + (i + 1) * 0.004 * 60,
-        onEnter: () => gsap.set(dot, { opacity: 0.45 * (1 - (i + 1) / TAIL_COUNT) }),
-        onLeaveBack: () => gsap.set(dot, { opacity: 0 }),
-      },
-    });
+      // Tail trails opposite to scroll direction (above head when scrolling down)
+      const dir = velocity >= 0 ? -1 : 1;
+      const spread = Math.min(Math.abs(velocity) * 800, 1); // 0–1 based on scroll speed
+
+      tailEls.forEach((dot, i) => {
+        if (!dot) return;
+        const offset = (i + 1) / TAIL_COUNT;
+        const tailY = y + dir * offset * spread * vh * 0.25;
+        gsap.to(dot, {
+          x, y: tailY, xPercent: -50, yPercent: -50,
+          duration: 0.2 + (i + 1) * 0.04,
+          ease: "power1.out",
+          overwrite: true,
+        });
+      });
+    },
+    onEnter: () => {
+      tailEls.forEach((dot, i) => {
+        if (!dot) return;
+        gsap.set(dot, { opacity: 0.45 * (1 - (i + 1) / TAIL_COUNT) });
+      });
+    },
+    onLeaveBack: () => {
+      tailEls.forEach((dot) => dot && gsap.set(dot, { opacity: 0 }));
+      gsap.set([cometEl, glowEl], { opacity: 0 });
+    },
   });
 }
 
@@ -176,36 +186,20 @@ function setupPillHighlight() {
 // ─── Component ──────────────────────────────────────────────────────
 
 const ScrollComet = () => {
-  const svgRef = useRef(null);
   const cometRef = useRef(null);
   const glowRef = useRef(null);
   const tailRefs = useRef([]);
-  const pathRef = useRef(null);
   const orbRefs = useRef([]);
   const bloomRef = useRef(null);
 
   useEffect(() => {
-    const svg = svgRef.current;
     const comet = cometRef.current;
     const glow = glowRef.current;
-    const path = pathRef.current;
     const bloom = bloomRef.current;
-    if (!svg || !comet || !path || !bloom) return;
+    if (!comet || !bloom) return;
 
     const convX = () => window.innerWidth / 2;
     const convY = () => window.innerHeight * 0.8;
-
-    // Resize SVG to match document
-    const resize = () => {
-      const docH = document.documentElement.scrollHeight;
-      const docW = window.innerWidth;
-      svg.setAttribute("viewBox", `0 0 ${docW} ${docH}`);
-      svg.style.width = `${docW}px`;
-      svg.style.height = `${docH}px`;
-      path.setAttribute("d", buildPath(docW, docH, convX(), docH * 0.15 + convY()));
-    };
-    resize();
-    window.addEventListener("resize", resize);
 
     // Init
     const floatAnims = setupOrbFloats(orbRefs.current);
@@ -216,66 +210,44 @@ const ScrollComet = () => {
 
     // Animations
     setupConvergence(orbRefs.current, bloom, comet, glow, tailRefs.current, floatAnims, convX, convY);
-    setupCometTravel(comet, glow, tailRefs.current, path);
+    setupCometTravel(comet, glow, tailRefs.current);
     const pillRAF = setupPillHighlight();
 
     return () => {
       cancelAnimationFrame(pillRAF);
-      window.removeEventListener("resize", resize);
       floatAnims.forEach((a) => a.kill());
       ScrollTrigger.getAll().forEach((t) => t.kill());
     };
   }, []);
 
   return (
-    <>
-      <div className="scroll-comet-wrapper">
-        {Array.from({ length: ORB_COUNT }).map((_, i) => (
+    <div className="scroll-comet-wrapper">
+      {Array.from({ length: ORB_COUNT }).map((_, i) => (
+        <div
+          key={`orb-${i}`}
+          ref={(el) => (orbRefs.current[i] = el)}
+          className="scroll-comet-orb"
+          style={{ width: orbSizes[i], height: orbSizes[i] }}
+        />
+      ))}
+      <div ref={bloomRef} className="scroll-comet-bloom" />
+
+      {Array.from({ length: TAIL_COUNT }).map((_, i) => {
+        const t = (i + 1) / TAIL_COUNT;
+        const size = 10 * (1 - t * 0.7);
+        return (
           <div
-            key={i}
-            ref={(el) => (orbRefs.current[i] = el)}
-            className="scroll-comet-orb"
-            style={{ width: orbSizes[i], height: orbSizes[i] }}
+            key={`tail-${i}`}
+            ref={(el) => (tailRefs.current[i] = el)}
+            className="scroll-comet-tail"
+            style={{ width: size, height: size, filter: `blur(${1 + t * 4}px)` }}
           />
-        ))}
-        <div ref={bloomRef} className="scroll-comet-bloom" />
-      </div>
+        );
+      })}
 
-      <svg ref={svgRef} className="scroll-comet-svg">
-        <defs>
-          <filter id="comet-glow" x="-200%" y="-200%" width="500%" height="500%">
-            <feGaussianBlur stdDeviation="6" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
-          <filter id="comet-ambient" x="-300%" y="-300%" width="700%" height="700%">
-            <feGaussianBlur stdDeviation="18" />
-          </filter>
-          <radialGradient id="tail-grad">
-            <stop offset="0%" stopColor={GOLD} stopOpacity="0.6" />
-            <stop offset="100%" stopColor={GOLD} stopOpacity="0" />
-          </radialGradient>
-        </defs>
-
-        <path ref={pathRef} d="" fill="none" stroke="none" />
-
-        {Array.from({ length: TAIL_COUNT }).map((_, i) => {
-          const t = (i + 1) / TAIL_COUNT;
-          return (
-            <circle
-              key={i}
-              ref={(el) => (tailRefs.current[i] = el)}
-              r={5 * (1 - t * 0.7)}
-              fill={GOLD}
-              opacity={0}
-              style={{ filter: `blur(${1 + t * 4}px)` }}
-            />
-          );
-        })}
-
-        <circle ref={glowRef} r={28} fill={GOLD} opacity={0} filter="url(#comet-ambient)" />
-        <circle ref={cometRef} r={6} fill={GOLD} filter="url(#comet-glow)" opacity={0} />
-      </svg>
-    </>
+      <div ref={glowRef} className="scroll-comet-glow" />
+      <div ref={cometRef} className="scroll-comet-head" />
+    </div>
   );
 };
 

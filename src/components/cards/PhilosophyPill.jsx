@@ -85,7 +85,6 @@ const PhilosophyPill = ({ icon, title, desc, detail, delay, index = 0 }) => {
             overflow: "hidden",
             width: "100%",
             animation: `pillReveal 0.9s cubic-bezier(0.23, 1, 0.32, 1) ${delay}s both`,
-            transform: `perspective(800px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) ${expanded ? "translateY(-6px)" : "translateY(0)"}`,
             transition: expanded
               ? "transform 0.12s ease, box-shadow 0.4s ease, background 0.4s ease"
               : "transform 0.55s cubic-bezier(0.23,1,0.32,1), box-shadow 0.55s ease, background 0.4s ease",
@@ -104,12 +103,6 @@ const PhilosophyPill = ({ icon, title, desc, detail, delay, index = 0 }) => {
               inset: 0,
               borderRadius: 20,
               padding: "1px",
-              background: expanded
-                ? "linear-gradient(135deg, rgba(200,170,120,0.6) 0%, rgba(200,170,120,0.1) 40%, rgba(255,255,255,0.08) 60%, rgba(200,170,120,0.4) 100%)"
-                : "linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 60%)",
-              WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
-              WebkitMaskComposite: "xor",
-              maskComposite: "exclude",
               transition: "background 0.4s ease",
               pointerEvents: "none",
             }}
@@ -121,7 +114,6 @@ const PhilosophyPill = ({ icon, title, desc, detail, delay, index = 0 }) => {
               style={{
                 position: "absolute",
                 inset: 0,
-                background: "linear-gradient(90deg, transparent, rgba(200,170,120,0.12), transparent)",
                 animation: "shimmerSweep 0.7s ease forwards",
                 pointerEvents: "none",
               }}
@@ -235,7 +227,6 @@ const PhilosophyPill = ({ icon, title, desc, detail, delay, index = 0 }) => {
               width: 120,
               height: 120,
               borderRadius: "50%",
-              background: "radial-gradient(circle, rgba(200,170,120,0.12) 0%, transparent 70%)",
               opacity: expanded ? 1 : 0,
               transition: "opacity 0.5s ease",
               pointerEvents: "none",
