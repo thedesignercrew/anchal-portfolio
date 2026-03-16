@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 
-const chars = "!<>-_\\/[]{}—=+*^?#________";
 
 const useTextScramble = (text, trigger) => {
   const [display, setDisplay] = useState(text);

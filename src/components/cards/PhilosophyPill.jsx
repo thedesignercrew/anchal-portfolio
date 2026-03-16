@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { GlyphKnot, GlyphTarget, GlyphGlobe, GlyphVenn } from "./glyphs";
 
 const GLYPHS = [GlyphKnot, GlyphTarget, GlyphGlobe, GlyphVenn];
@@ -19,7 +19,6 @@ const FLOAT_CONFIG = [
 
 const PhilosophyPill = ({ icon, title, desc, detail, delay, index = 0 }) => {
   const [cometActive, setCometActive] = useState(false);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [shimmer, setShimmer] = useState(false);
   const cardRef = useRef(null);
 
@@ -44,16 +43,6 @@ const PhilosophyPill = ({ icon, title, desc, detail, delay, index = 0 }) => {
     };
   }, []);
 
-  const handleMouseMove = useCallback((e) => {
-    const rect = cardRef.current.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dx = (e.clientX - cx) / (rect.width / 2);
-    const dy = (e.clientY - cy) / (rect.height / 2);
-    setTilt({ x: dy * -6, y: dx * 6 });
-  }, []);
-
-  const handleMouseLeave = () => setTilt({ x: 0, y: 0 });
 
   const floatCfg = FLOAT_CONFIG[index];
   const offset = STAGGER_OFFSETS[index];
@@ -71,8 +60,6 @@ const PhilosophyPill = ({ icon, title, desc, detail, delay, index = 0 }) => {
         <div
           ref={cardRef}
           data-philosophy-pill
-          onMouseLeave={handleMouseLeave}
-          onMouseMove={handleMouseMove}
           style={{
             position: "relative",
             display: "flex",
