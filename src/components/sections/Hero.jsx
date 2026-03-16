@@ -1,5 +1,164 @@
-import FloatingOrb from "../ui/FloatingOrb";
+import { useRef, useEffect, useCallback } from "react";
+import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import RingSpinner from "../ui/RingSpinner";
+
+const W = 1200;
+const H = 420;
+const VX = W / 2;
+const VY = H;
+const NUM_RADIAL = 18;
+const NUM_H = 10;
+
+const PerspectiveGrid = () => {
+  const wrapperRef = useRef(null);
+  const svgRef = useRef(null);
+  const progressRef = useRef({ value: 0 });
+
+  // Build line data for a given convergence progress (0 = parallel, 1 = fully converged)
+  const updateLines = useCallback((p) => {
+    const svg = svgRef.current;
+    if (!svg) return;
+
+    // Update radial lines
+    const radials = svg.querySelectorAll(".grid-radial");
+    for (let i = 0; i < radials.length; i++) {
+      const t = i / NUM_RADIAL;
+      const topX = W * 0.02 + t * W * 0.96;
+      // At p=0: bottom x = topX (parallel/straight), at p=1: bottom x = VX (converged)
+      const bottomX = topX + (VX - topX) * p;
+      radials[i].setAttribute("x1", bottomX);
+      radials[i].setAttribute("x2", topX);
+    }
+
+    // Update horizontal lines
+    const horizons = svg.querySelectorAll(".grid-horiz");
+    for (let i = 0; i < horizons.length; i++) {
+      const t = ((i + 1) / NUM_H) ** 1.8;
+      const y = t * H;
+      // At p=0: horizontals span full width, at p=1: they narrow toward vanishing point
+      const leftFull = W * 0.02;
+      const rightFull = W * 0.98;
+      const leftConverged = VX + (leftFull - VX) * (1 - y / H);
+      const rightConverged = VX + (rightFull - VX) * (1 - y / H);
+      const leftX = leftFull + (leftConverged - leftFull) * p;
+      const rightX = rightFull + (rightConverged - rightFull) * p;
+      horizons[i].setAttribute("x1", leftX);
+      horizons[i].setAttribute("x2", rightX);
+    }
+  }, []);
+
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+
+    // Initial entrance animation (mask reveal)
+    gsap.fromTo(
+      el,
+      {
+        opacity: 0,
+        WebkitMaskImage:
+          "linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 0%)",
+        maskImage:
+          "linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 0%)",
+      },
+      {
+        opacity: 1,
+        WebkitMaskImage:
+          "linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 100%)",
+        maskImage:
+          "linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 100%)",
+        duration: 1.5,
+        ease: "power2.out",
+        delay: 0.2,
+      }
+    );
+
+    // Set initial state (parallel lines)
+    updateLines(0);
+
+    // Scroll-driven convergence: 0 → 360vh
+    gsap.to(progressRef.current, {
+      value: 1,
+      ease: "power2.in",
+      scrollTrigger: {
+        trigger: document.body,
+        start: "top top",
+        end: "360vh top",
+        scrub: true,
+      },
+      onUpdate: () => updateLines(progressRef.current.value),
+    });
+
+    return () => {
+      ScrollTrigger.getAll()
+        .filter((st) => st.vars.trigger === document.body && st.vars.end === "360vh top")
+        .forEach((st) => st.kill());
+    };
+  }, [updateLines]);
+
+  // Build initial SVG lines (attributes will be overwritten by updateLines)
+  const radialLines = [];
+  for (let i = 0; i <= NUM_RADIAL; i++) {
+    const t = i / NUM_RADIAL;
+    const topX = W * 0.02 + t * W * 0.96;
+    radialLines.push(
+      <line
+        key={`r${i}`}
+        className="grid-radial"
+        x1={topX} y1={VY}
+        x2={topX} y2={0}
+        stroke="rgba(200,170,120,0.18)"
+        strokeWidth="0.8"
+      />
+    );
+  }
+
+  const horizontals = [];
+  for (let i = 1; i <= NUM_H; i++) {
+    horizontals.push(
+      <line
+        key={`h${i}`}
+        className="grid-horiz"
+        x1={W * 0.02} y1={((i / NUM_H) ** 1.8) * H}
+        x2={W * 0.98} y2={((i / NUM_H) ** 1.8) * H}
+        stroke="rgba(200,170,120,0.12)"
+        strokeWidth="0.7"
+      />
+    );
+  }
+
+  return (
+    <div
+      ref={wrapperRef}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        height: H,
+        maskImage: "linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 0%)",
+        WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 0%)",
+        pointerEvents: "none",
+        overflow: "hidden",
+        opacity: 0,
+      }}
+    >
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        preserveAspectRatio="xMidYMid slice"
+        style={{ width: "100%", height: "100%", display: "block" }}
+      >
+        <circle cx={VX} cy={VY} r={3} fill="rgba(200,170,120,0.35)" />
+        <circle cx={VX} cy={VY} r={12} fill="none" stroke="rgba(200,170,120,0.1)" strokeWidth="1" />
+        {radialLines}
+        {horizontals}
+      </svg>
+    </div>
+  );
+};
+
 
 const Hero = () => (
   <section
@@ -15,6 +174,7 @@ const Hero = () => (
     }}
   >
     {/* Decorative rings */}
+    <PerspectiveGrid/>
     <div
       style={{
         position: "absolute",
@@ -26,15 +186,6 @@ const Hero = () => (
       <RingSpinner size={180} speed={25} />
       <RingSpinner size={120} speed={18} color="rgba(138,172,184,0.12)" />
     </div>
-
-    {[...Array(8)].map((_, i) => (
-      <FloatingOrb
-        key={i}
-        delay={i * 0.5}
-        size={4 + (i % 3) * 2}
-        index={i}
-      />
-    ))}
 
     <div style={{ position: "relative", zIndex: 2 }}>
       <div
