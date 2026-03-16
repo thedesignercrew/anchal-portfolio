@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import "./styles/animations.css";
 
 import MorphBlob from "./components/ui/MorphBlob";
+import ScrollComet from "./components/ui/ScrollComet";
 import Navbar from "./components/sections/Navbar";
 import Hero from "./components/sections/Hero";
 import Philosophy from "./components/sections/Philosophy";
@@ -83,6 +84,7 @@ export default function Portfolio() {
         }}
       />
 
+      <ScrollComet />
       <Navbar />
       <Hero />
       <Philosophy />
